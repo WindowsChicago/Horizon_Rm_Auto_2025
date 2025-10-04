@@ -1,0 +1,132 @@
+%YAML:1.0
+---
+#注意：yaml文件对缩进要求极为严格，独立变量必须顶格写，不允许有多余空格
+
+#TRT模式选择模型：20系显卡->Turing；30系显卡->Ampere；40系显卡->Ada；NX->Volta
+#EnginePath: ../model/Volta/yolox_94_fp32_dynaminc.engine
+#EnginePath: ../model/Turing/yolox_94_fp32_dynaminc.engine
+EnginePath: ../model/Ampere/yolox_94_fp32_dynaminc.engine
+#EnginePath: ../model/Ada/yolox_94_fp32_dynaminc.engine
+
+#OpenVINO推理模式：CPU->纯CPU推理，较慢，支持所有设备；GPU->核显加速，仅支持intel 6代及以后且安装了核显驱动的设备
+OVInferDevice: CPU
+
+#识别装甲板颜色 red: 1，blue: 2，purple(仅TRT): 3
+detect_color: 2
+
+#TRT模型置信度和非极大值抑制（老英雄为0.85和0.3，老步兵为0.65和0.25，老哨兵是0.89和0.4）
+TRT_confidence: 0.85
+TRT_nms_threshold: 0.3
+
+#弹道中心矫正角度（老代码默认）
+#pit_corangle: -1.5 #负为低头，正为抬头
+#yaw_corangle: 1.5 #负为左转，正为右转
+
+#弹道中心矫正角度（英雄5m定点/旋转）
+pit_corangle: -1.30 #负为低头，正为抬头
+yaw_corangle: 1.25 #负为左转，正为右转
+
+#弹道中心矫正角度（哨兵3m定点）
+#pit_corangle: -1.30 #负为低头，正为抬头
+#yaw_corangle: 1.25 #负为左转，正为右转
+
+#弹道中心矫正角度（哨兵3m旋转，RMUL）
+#pit_corangle: -1.0 #负为低头，正为抬头
+#yaw_corangle: -1.0 #负为左转，正为右转
+
+#触发边缘追踪机制的yaw边缘最大值
+yaw_max_edge: 10
+#触发边缘追踪机制的预测与实际yaw差值的最大值
+pre_yaw_maxdif: 5
+
+#自动开火判断阈值（接收与发送的差值）
+fire_yaw_dif: 3
+fire_pit_dif: 3
+#自动开火判断阈值（哨兵RMUL）
+#fire_yaw_dif: 1.5
+#fire_pit_dif: 1.1
+
+#失帧计数器最大值（建议不动）
+loss_cnt_max: 250
+#失帧最大切换值(调大可以解决频繁使用“上一帧”的数据的问题，pre建议调小，cru建议调大)
+pre_los_maxq: 10
+cru_los_maxq: 200
+
+#NT最大丢失次数（与旧内核的失帧最大切换值等同效果）
+NT_LOSS_MAXQ: 35
+#NT最大跟踪次数
+NT_TRACK_MAXQ: 5
+
+#最小二乘法速度缓存大小，LQQ,WTYNX：20;LSNOMINI,WTYSOC：15，NX建议保持20不动，电脑建议根据帧数拉大
+velocities_deque_size_: 20
+
+#默认弹速（程序初始化的默认弹速，会随着电控发送而改变值）
+default_fire_v0: 19
+#fire_v0: 29.1 //lsn
+
+#关于机械偏置（相机到枪口）的解释：原点为枪口（这里指子弹获得速度的地方）
+#子弹前进的方向为z正方向，该方向的右边为x正方向，该方向上面为y正方向
+#故一般在枪口斜向上的相机x为0，y为正数值，z为正数值
+X_BIAS: 0.0
+
+#英雄机械偏置（相机到枪口）
+Y_BIAS: 0.0796
+Z_BIAS: 0.12799
+
+#哨兵机械偏置（相机到枪口）
+#Y_BIAS: 0.094
+#Z_BIAS: 0.17281
+
+#全向步兵机械偏置（相机到枪口）
+#X_BIAS: 0.05040
+#Y_BIAS: 0.04559
+#Z_BIAS: 0.04852
+
+#麦轮步兵机械偏置（相机到枪口）
+#X_BIAS: 0.050
+#Y_BIAS: 0.047
+#Z_BIAS: 0.047
+
+#平衡步兵机械偏置（相机到枪口）
+#X_BIAS: 0.050
+#Y_BIAS: 0.047
+#Z_BIAS: 0.047
+
+#飞机机械偏置（相机到枪口）
+#Y_BIAS: 0.06118
+#Z_BIAS: 0.0727
+
+#New Technology
+
+#EKF
+q_x_x: 3.2768000000000003e-07
+q_x_vx: 4.096e-05
+q_vx_vx: 0.0051199999999999996
+q_y_y: 1.6384000000000003e-06
+q_y_vy: 8.096e-05
+q_vy_vy: 0.0095599999999999998
+q_r: 1.3107200000000002e-05
+r_yaw: 0.45
+x1: 0.0025
+x2 : 0.0025
+x3: 0.04
+
+#大恒相机参数
+Dexp_time: 7200
+Dexpgain: 15
+#Dexp_time: 8000
+#Dexpgain: 16
+
+#迈德威视
+Mexp_time: 8000
+
+#关于哨兵的前哨站状态设置 #目前没啥用
+outpost_state: true
+
+#大小装甲实际大小（不用修改）
+small_armor:
+  width: 13.5
+  height: 5.7
+large_armor:
+  width: 22.5
+  height: 5.7

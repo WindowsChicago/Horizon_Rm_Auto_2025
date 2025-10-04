@@ -1,0 +1,92 @@
+# CMake 最低版本要求
+cmake_minimum_required(VERSION 3.10)
+
+project(rm_auto)
+
+#add_definitions(-std=c++11)
+add_definitions(-DAPI_EXPORTS)
+option(CUDA_USE_STATIC_CUDA_RUNTIME off)
+set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_BUILD_TYPE "Release")
+#set(CMAKE_BUILD_TYPE "debug")
+set(CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR})
+FIND_PROGRAM(CCACHE_FOUND ccache) # ccache编译器缓存（NT内核必须开启）
+IF (CCACHE_FOUND)
+    SET_PROPERTY(GLOBAL PROPERTY RULE_LAUNCH_COMPILE ccache)
+    SET_PROPERTY(GLOBAL PROPERTY RULE_LAUNCH_LINK ccache)
+    MESSAGE("< Use ccache for compiler >")
+ENDIF ()
+
+
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-z,stack-size=1600000000")
+set(CUDA_GEN_CODE "-gencode=arch=compute_80,code=sm_80")
+#xavier为72,orin为87，16/20系显卡为75，30系显卡为80/86，40系显卡为89
+set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS}   -Xcompiler -fPIC  -w ${CUDA_GEN_CODE}")
+
+# 各个相机库文件的放置目录
+set(MV_SDK /usr/lib/libMVSDK.so) #迈德
+set(SDK_DIR /usr/lib/libgxiapi.so) #大恒
+set(HIKVISION_CAMERA_DIR "${PROJECT_SOURCE_DIR}/drivers/HikVision") # 设置海康相机SDK工具包目录
+#SET(YAML_CPP_LIBRARIES /usr/local/lib/libyaml-cpp.so) # 设置yaml-cpp库，下面已经有了所以这里不用了
+# 海康相机动态链接库所在路径
+LINK_DIRECTORIES(${HIKVISION_CAMERA_DIR}/64)
+# 海康相机库目录
+INCLUDE_DIRECTORIES(${HIKVISION_CAMERA_DIR}/include)
+INCLUDE_DIRECTORIES(${HIKVISION_CAMERA_DIR}/tool/include)
+# 海康相机拓展工具文件
+FILE(GLOB_RECURSE sourcefiles "${HIKVISION_CAMERA_DIR}/src/*.cpp" "${HIKVISION_CAMERA_DIR}/tool/src/*.cpp")
+
+# C++11 标准、o3优化、多线程（NT内核必须开启）
+set(CMAKE_CXX_FLAGS_RELEASE "$ENV{CXXFLAGS} -std=c++14 -O2 -Wno-sign-compare  -Wno-write-strings -Wno-deprecated-declarations -pthread -Wall -Ofast -fopenmp -g -Wfatal-errors -D_MWAITXINTRIN_H_INCLUDED")# 定义Release编译参数
+SET(CMAKE_CXX_FLAGS_DEBUG "$ENV{CXXFLAGS} -O2 -std=c++14 -lstdc++ -Wall -g2 -ggdb -pthread -fopenmp -g -Wfatal-errors -D_MWAITXINTRIN_H_INCLUDED") # 定义Debug编译参数
+
+# cuda
+find_package(CUDA REQUIRED)
+include_directories(/usr/local/cuda/include)
+link_directories(/usr/local/cuda/lib64)
+
+# tensorrt
+include_directories(/home/ad/TensorRT-8.5.1.7/include)
+link_directories(/home/ad/TensorRT-8.5.1.7/lib)
+
+# find_package
+find_package(yaml-cpp REQUIRED)
+find_package(OpenCV REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(fmt REQUIRED)
+find_package(Ceres REQUIRED)
+
+file(GLOB_RECURSE "/usr/lib/python3.8/config-x86_64-linux-gnu/*.so") #NT
+#头文件目录（.h/hpp）
+#include_directories("/usr/local/include/ceres") #old
+#include_directories("/usr/include/eigen3") #old
+include_directories(${EIGEN3_INCLUDE_DIR})
+include_directories(${OpenCV_INCLUDE_DIRS})
+include_directories(${PROJECT_SOURCE_DIR}/trt)
+#include_directories(${PROJECT_SOURCE_DIR}/buff)
+include_directories(${PROJECT_SOURCE_DIR}/drivers)
+include_directories(${PROJECT_SOURCE_DIR}/control)
+include_directories(${PROJECT_SOURCE_DIR}/aim/include)
+include_directories(${PROJECT_SOURCE_DIR}/rune/include)
+
+#src文件目录(.c/cpp)
+aux_source_directory(./trt SRC_FILES)
+#aux_source_directory(./buff SRC_FILES)
+aux_source_directory(./drivers/DaHeng SRC_FILES)
+aux_source_directory(./aim/src SRC_FILES)
+aux_source_directory(./rune/src SRC_FILES)
+
+
+cuda_add_executable(${PROJECT_NAME} ${SRC_FILES} ${sourcefiles} ./aim/src/main.cpp)
+
+set_target_properties(rm_auto PROPERTIES CUDA_SEPARABLE_COMPILATION ON)
+target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
+target_link_libraries(${PROJECT_NAME} ${SDK_DIR})
+target_link_libraries(${PROJECT_NAME} ${MV_SDK})
+target_link_libraries(${PROJECT_NAME} ${CERES_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} nvinfer)
+target_link_libraries(${PROJECT_NAME} cudart)
+target_link_libraries(${PROJECT_NAME} fmt::fmt nvonnxparser cuda)
+
+target_link_libraries(${PROJECT_NAME} ${YAML_CPP_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} MvCameraControl)
